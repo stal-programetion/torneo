@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torneo FIFA - Organizador</title>
+    <title>Torneo FIFA - Organizador con Cruces</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🏆 Organizador de Torneos FIFA</h1>
-            <p>Organiza torneos y asigna equipos a tus amigos</p>
+            <h1>⚽ Organizador de Torneos FIFA</h1>
+            <p>Organiza torneos con cruces automáticos</p>
         </header>
 
         <main>
@@ -31,28 +31,31 @@
                 </select>
             </section>
 
-            <!-- Sección de equipos disponibles -->
-            <section class="teams-section" id="teamsSection" style="display: none;">
-                <h2>Equipos Disponibles</h2>
-                <div class="teams-grid" id="teamsGrid"></div>
-                <button onclick="toggleTeamSelection()">Seleccionar Equipos</button>
-            </section>
-
             <!-- Sección de jugadores -->
             <section class="players-section" id="playersSection" style="display: none;">
-                <h2>Agregar Jugadores</h2>
+                <h2>Jugadores del Torneo</h2>
                 <div class="form-group">
                     <input type="text" id="playerName" placeholder="Nombre del jugador">
                     <button onclick="addPlayer()">Agregar Jugador</button>
                 </div>
-                <button onclick="assignTeams()" id="assignBtn" disabled>Asignar Equipos Aleatoriamente</button>
+                <div id="playersList"></div>
+                <button onclick="generateTournament()" id="generateBtn" disabled>Generar Torneo</button>
             </section>
 
             <!-- Sección de asignaciones -->
             <section class="assignments-section" id="assignmentsSection" style="display: none;">
-                <h2>Asignaciones del Torneo</h2>
+                <h2>Asignaciones de Equipos</h2>
                 <div id="assignmentsList"></div>
-                <button onclick="resetAssignments()">Reiniciar Asignaciones</button>
+            </section>
+
+            <!-- Sección de cruces -->
+            <section class="bracket-section" id="bracketSection" style="display: none;">
+                <h2>Cruces del Torneo</h2>
+                <div class="tournament-info">
+                    <div class="tournament-type" id="tournamentType"></div>
+                    <button onclick="resetTournament()">Reiniciar Torneo</button>
+                </div>
+                <div id="bracketContainer"></div>
             </section>
         </main>
     </div>
