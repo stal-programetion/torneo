@@ -3,43 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torneo FIFA - Organizador con Cruces</title>
+    <title>Liga FIFA - Organizador</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>⚽ Organizador de Torneos FIFA</h1>
-            <p>Organiza torneos con cruces automáticos</p>
+            <h1>⚽ Liga FIFA - Todos contra Todos</h1>
+            <p>Organiza ligas con tabla de posiciones automática</p>
         </header>
 
         <main>
-            <!-- Sección de crear torneo -->
+            <!-- Sección de crear liga -->
             <section class="create-tournament">
-                <h2>Crear Nuevo Torneo</h2>
+                <h2>Crear Nueva Liga</h2>
                 <div class="form-group">
-                    <input type="text" id="tournamentName" placeholder="Nombre del torneo" required>
-                    <button onclick="createTournament()">Crear Torneo</button>
+                    <input type="text" id="tournamentName" placeholder="Nombre de la liga" required>
+                    <button onclick="createTournament()">Crear Liga</button>
                 </div>
             </section>
 
-            <!-- Selector de torneo activo -->
+            <!-- Selector de liga activa -->
             <section class="tournament-selector">
-                <h2>Seleccionar Torneo</h2>
+                <h2>Seleccionar Liga</h2>
                 <select id="tournamentSelect" onchange="loadTournament()">
-                    <option value="">Selecciona un torneo</option>
+                    <option value="">Selecciona una liga</option>
                 </select>
             </section>
 
             <!-- Sección de jugadores -->
             <section class="players-section" id="playersSection" style="display: none;">
-                <h2>Jugadores del Torneo</h2>
+                <h2>Jugadores de la Liga</h2>
                 <div class="form-group">
                     <input type="text" id="playerName" placeholder="Nombre del jugador">
                     <button onclick="addPlayer()">Agregar Jugador</button>
                 </div>
                 <div id="playersList"></div>
-                <button onclick="generateTournament()" id="generateBtn" disabled>Generar Torneo</button>
+                <button onclick="generateLeague()" id="generateBtn" disabled>Generar Liga</button>
             </section>
 
             <!-- Sección de asignaciones -->
@@ -48,14 +48,22 @@
                 <div id="assignmentsList"></div>
             </section>
 
-            <!-- Sección de cruces -->
-            <section class="bracket-section" id="bracketSection" style="display: none;">
-                <h2>Cruces del Torneo</h2>
-                <div class="tournament-info">
-                    <div class="tournament-type" id="tournamentType"></div>
-                    <button onclick="resetTournament()">Reiniciar Torneo</button>
+            <!-- Sección de tabla de posiciones -->
+            <section class="standings-section" id="standingsSection" style="display: none;">
+                <h2>Tabla de Posiciones</h2>
+                <div id="standingsTable"></div>
+            </section>
+
+            <!-- Sección de partidos -->
+            <section class="matches-section" id="matchesSection" style="display: none;">
+                <h2>Calendario de Partidos</h2>
+                <div class="matches-filter">
+                    <button onclick="filterMatches('all')" class="filter-btn active" data-filter="all">Todos</button>
+                    <button onclick="filterMatches('pending')" class="filter-btn" data-filter="pending">Pendientes</button>
+                    <button onclick="filterMatches('completed')" class="filter-btn" data-filter="completed">Completados</button>
                 </div>
-                <div id="bracketContainer"></div>
+                <div id="matchesList"></div>
+                <button onclick="resetLeague()">Reiniciar Liga</button>
             </section>
         </main>
     </div>

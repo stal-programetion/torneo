@@ -1,4 +1,4 @@
-// Equipos específicos solicitados
+// Equipos específicos
 const fifaTeams = [
     { name: 'PSG', logo: 'PSG', color: '#004170' },
     { name: 'Real Madrid', logo: 'RMA', color: '#ffffff' },
@@ -15,23 +15,24 @@ const fifaTeams = [
 // Variables globales
 let tournaments = JSON.parse(localStorage.getItem('tournaments')) || {};
 let currentTournament = '';
+let currentMatchFilter = 'all';
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', function() {
     loadTournamentSelector();
 });
 
-// Crear nuevo torneo
+// Crear nueva liga
 function createTournament() {
     const tournamentName = document.getElementById('tournamentName').value.trim();
     
     if (!tournamentName) {
-        showAlert('Por favor ingresa un nombre para el torneo', 'error');
+        showAlert('Por favor ingresa un nombre para la liga', 'error');
         return;
     }
     
     if (tournaments[tournamentName]) {
-        showAlert('Ya existe un torneo con ese nombre', 'error');
+        showAlert('Ya existe una liga con ese nombre', 'error');
         return;
     }
     
@@ -39,8 +40,8 @@ function createTournament() {
         name: tournamentName,
         players: [],
         assignments: {},
-        bracket: null,
-        tournamentType: '',
+        matches: [],
+        standings: {},
         createdAt: new Date().toISOString()
     };
     
@@ -48,13 +49,13 @@ function createTournament() {
     document.getElementById('tournamentName').value = '';
     
     loadTournamentSelector();
-    showAlert('Torneo creado exitosamente', 'success');
+    showAlert('Liga creada exitosamente', 'success');
 }
 
 // Cargar selector de torneos
 function loadTournamentSelector() {
     const select = document.getElementById('tournamentSelect');
-    select.innerHTML = '<option value="">Selecciona un torneo</option>';
+    select.innerHTML = '<option value="">Selecciona una liga</option>';
     
     Object.keys(tournaments).forEach(tournamentName => {
         const option = document.createElement('option');
@@ -77,7 +78,8 @@ function loadTournament() {
     showAllSections();
     renderPlayers();
     renderAssignments();
-    renderBracket();
+    renderStandings();
+    renderMatches();
     updateGenerateButton();
 }
 
@@ -87,15 +89,17 @@ function showAllSections() {
     document.getElementById('assignmentsSection').style.display = 'block';
     
     const tournament = tournaments[currentTournament];
-    if (tournament.bracket) {
-        document.getElementById('bracketSection').style.display = 'block';
+    if (tournament.matches.length > 0) {
+        document.getElementById('standingsSection').style.display = 'block';
+        document.getElementById('matchesSection').style.display = 'block';
     }
 }
 
 function hideAllSections() {
     document.getElementById('playersSection').style.display = 'none';
     document.getElementById('assignmentsSection').style.display = 'none';
-    document.getElementById('bracketSection').style.display = 'none';
+    document.getElementById('standingsSection').style.display = 'none';
+    document.getElementById('matchesSection').style.display = 'none';
 }
 
 // Agregar jugador
@@ -108,19 +112,19 @@ function addPlayer() {
     }
     
     if (!currentTournament) {
-        showAlert('Selecciona un torneo primero', 'error');
+        showAlert('Selecciona una liga primero', 'error');
         return;
     }
     
     const tournament = tournaments[currentTournament];
     
     if (tournament.players.includes(playerName)) {
-        showAlert('Este jugador ya está en el torneo', 'error');
+        showAlert('Este jugador ya está en la liga', 'error');
         return;
     }
     
     if (tournament.players.length >= 10) {
-        showAlert('Máximo 10 jugadores por torneo', 'error');
+        showAlert('Máximo 10 jugadores por liga', 'error');
         return;
     }
     
@@ -130,7 +134,7 @@ function addPlayer() {
     
     renderPlayers();
     updateGenerateButton();
-    showAlert(`${playerName} agregado al torneo`, 'success');
+    showAlert(`${playerName} agregado a la liga`, 'success');
 }
 
 // Remover jugador
@@ -143,14 +147,19 @@ function removePlayer(playerName) {
     if (index > -1) {
         tournament.players.splice(index, 1);
         delete tournament.assignments[playerName];
-        tournament.bracket = null;
+        delete tournament.standings[playerName];
+        tournament.matches = [];
+        
         localStorage.setItem('tournaments', JSON.stringify(tournaments));
         
         renderPlayers();
         renderAssignments();
+        renderStandings();
+        renderMatches();
         updateGenerateButton();
-        document.getElementById('bracketSection').style.display = 'none';
-        showAlert(`${playerName} removido del torneo`, 'success');
+        document.getElementById('standingsSection').style.display = 'none';
+        document.getElementById('matchesSection').style.display = 'none';
+        showAlert(`${playerName} removido de la liga`, 'success');
     }
 }
 
@@ -166,7 +175,7 @@ function renderPlayers() {
     const tournament = tournaments[currentTournament];
     
     if (tournament.players.length === 0) {
-        playersList.innerHTML = '<p>No hay jugadores en este torneo.</p>';
+        playersList.innerHTML = '<p>No hay jugadores en esta liga.</p>';
         return;
     }
     
@@ -211,12 +220,12 @@ function updateGenerateButton() {
     } else if (tournament.players.length > 10) {
         generateBtn.textContent = 'Máximo 10 jugadores';
     } else {
-        generateBtn.textContent = `Generar Torneo (${tournament.players.length} jugadores)`;
+        generateBtn.textContent = `Generar Liga (${tournament.players.length} jugadores)`;
     }
 }
 
-// Generar torneo completo
-function generateTournament() {
+// Generar liga completa
+function generateLeague() {
     if (!currentTournament) return;
     
     const tournament = tournaments[currentTournament];
@@ -233,114 +242,61 @@ function generateTournament() {
         };
     });
     
-    // Generar bracket según cantidad de jugadores
-    tournament.bracket = generateBracket(tournament.players.length);
-    tournament.tournamentType = getTournamentType(tournament.players.length);
+    // Generar todos los partidos (todos contra todos)
+    tournament.matches = generateAllMatches(tournament.players);
+    
+    // Inicializar tabla de posiciones
+    initializeStandings(tournament);
     
     localStorage.setItem('tournaments', JSON.stringify(tournaments));
     
     renderAssignments();
-    renderBracket();
-    document.getElementById('bracketSection').style.display = 'block';
-    showAlert('Torneo generado exitosamente', 'success');
+    renderStandings();
+    renderMatches();
+    document.getElementById('standingsSection').style.display = 'block';
+    document.getElementById('matchesSection').style.display = 'block';
+    showAlert('Liga generada exitosamente', 'success');
 }
 
-// Determinar tipo de torneo
-function getTournamentType(playerCount) {
-    if (playerCount === 2) return 'Final Directa';
-    if (playerCount <= 4) return 'Semifinales';
-    if (playerCount <= 8) return 'Cuartos de Final';
-    return 'Octavos de Final';
-}
-
-// Generar bracket
-function generateBracket(playerCount) {
-    const tournament = tournaments[currentTournament];
-    const players = [...tournament.players].sort(() => Math.random() - 0.5);
-    
-    let bracket = {
-        rounds: [],
-        currentRound: 0
-    };
-    
-    // Calcular número de rondas necesarias
-    const rounds = Math.ceil(Math.log2(playerCount));
-    
-    // Primera ronda
-    const firstRound = {
-        name: getPhaseNameByParticipants(playerCount),
-        matches: []
-    };
-    
-    // Si el número no es potencia de 2, algunos jugadores pasan automáticamente
-    const nextPowerOf2 = Math.pow(2, rounds);
-    const byes = nextPowerOf2 - playerCount;
-    
+// Generar todos los partidos
+function generateAllMatches(players) {
+    const matches = [];
     let matchId = 1;
-    let playerIndex = 0;
     
-    // Crear matches de la primera ronda
-    for (let i = 0; i < playerCount / 2; i++) {
-        if (playerIndex < players.length - byes) {
-            // Match normal
-            firstRound.matches.push({
+    for (let i = 0; i < players.length; i++) {
+        for (let j = i + 1; j < players.length; j++) {
+            matches.push({
                 id: matchId++,
-                player1: players[playerIndex++],
-                player2: players[playerIndex++],
-                winner: null,
-                type: 'normal'
+                player1: players[i],
+                player2: players[j],
+                score1: null,
+                score2: null,
+                completed: false,
+                createdAt: new Date().toISOString()
             });
         }
     }
     
-    // Agregar byes si es necesario
-    while (playerIndex < players.length) {
-        firstRound.matches.push({
-            id: matchId++,
-            player1: players[playerIndex++],
-            player2: 'BYE',
-            winner: null,
-            type: 'bye'
-        });
-    }
-    
-    bracket.rounds.push(firstRound);
-    
-    // Generar rondas siguientes
-    let currentParticipants = Math.ceil(playerCount / 2);
-    
-    while (currentParticipants > 1) {
-        const round = {
-            name: getPhaseNameByParticipants(currentParticipants * 2),
-            matches: []
-        };
-        
-        for (let i = 0; i < currentParticipants / 2; i++) {
-            round.matches.push({
-                id: matchId++,
-                player1: 'TBD',
-                player2: 'TBD',
-                winner: null,
-                type: 'normal'
-            });
-        }
-        
-        bracket.rounds.push(round);
-        currentParticipants = Math.ceil(currentParticipants / 2);
-    }
-    
-    return bracket;
+    return matches;
 }
 
-// Obtener nombre de fase por número de participantes
-function getPhaseNameByParticipants(participants) {
-    switch (participants) {
-        case 2: return 'Final';
-        case 4: return 'Semifinal';
-        case 8: return 'Cuartos de Final';
-        case 16: return 'Octavos de Final';
-        default: return `Ronda de ${participants}`;
-    }
+// Inicializar tabla de posiciones
+function initializeStandings(tournament) {
+    tournament.standings = {};
+    
+    tournament.players.forEach(player => {
+        tournament.standings[player] = {
+            player: player,
+            points: 0,
+            played: 0,
+            won: 0,
+            drawn: 0,
+            lost: 0,
+            goalsFor: 0,
+            goalsAgainst: 0,
+            goalDifference: 0
+        };
+    });
 }
 
 // Renderizar asignaciones
@@ -356,7 +312,7 @@ function renderAssignments() {
     const assignments = Object.values(tournament.assignments);
     
     if (assignments.length === 0) {
-        assignmentsList.innerHTML = '<p>No hay asignaciones todavía. Genera el torneo para asignar equipos.</p>';
+        assignmentsList.innerHTML = '<p>No hay asignaciones todavía. Genera la liga para asignar equipos.</p>';
         return;
     }
     
@@ -373,58 +329,305 @@ function renderAssignments() {
     `).join('');
 }
 
-// Renderizar bracket
-function renderBracket() {
-    const bracketContainer = document.getElementById('bracketContainer');
-    const tournamentType = document.getElementById('tournamentType');
+// Renderizar tabla de posiciones
+function renderStandings() {
+    const standingsTable = document.getElementById('standingsTable');
     
     if (!currentTournament) {
-        bracketContainer.innerHTML = '';
+        standingsTable.innerHTML = '';
         return;
     }
     
     const tournament = tournaments[currentTournament];
+    const standings = Object.values(tournament.standings);
     
-    if (!tournament.bracket) {
-        bracketContainer.innerHTML = '<p>Genera el torneo para ver los cruces.</p>';
+    if (standings.length === 0) {
+        standingsTable.innerHTML = '<p>Genera la liga para ver la tabla de posiciones.</p>';
         return;
     }
     
-    tournamentType.textContent = `Formato: ${tournament.tournamentType}`;
+    // Ordenar por puntos, luego por diferencia de goles
+    standings.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+        return b.goalsFor - a.goalsFor;
+    });
     
-    const bracket = tournament.bracket;
-    
-    bracketContainer.innerHTML = `
-        <div class="bracket-container">
-            <div class="bracket">
-                ${bracket.rounds.map((round, roundIndex) => `
-                    <div class="bracket-round">
-                        <h3>${round.name}</h3>
-                        ${round.matches.map(match => `
-                            <div class="match ${round.name === 'Final' ? 'finals-match' : ''}">
-                                <div class="match-participant ${match.type === 'bye' ? 'bye' : ''}">
-                                    <div class="participant-logo">${getPlayerTeamLogo(match.player1)}</div>
-                                    <div class="participant-name">${match.player1}</div>
-                                </div>
-                                <div class="match-vs">VS</div>
-                                <div class="match-participant ${match.type === 'bye' ? 'bye' : ''}">
-                                    <div class="participant-logo">${getPlayerTeamLogo(match.player2)}</div>
-                                    <div class="participant-name">${match.player2}</div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `).join('')}
-            </div>
+    standingsTable.innerHTML = `
+        <div class="standings-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Pos</th>
+                        <th>Jugador</th>
+                        <th>Equipo</th>
+                        <th>PJ</th>
+                        <th>PG</th>
+                        <th>PE</th>
+                        <th>PP</th>
+                        <th>GF</th>
+                        <th>GC</th>
+                        <th>DG</th>
+                        <th>Pts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${standings.map((standing, index) => `
+                        <tr>
+                            <td class="position">${index + 1}</td>
+                            <td class="team-cell">
+                                <span>👤 ${standing.player}</span>
+                            </td>
+                            <td class="team-cell">
+                                <div class="team-logo-small">${getPlayerTeamLogo(standing.player)}</div>
+                                <span>${getPlayerTeamName(standing.player)}</span>
+                            </td>
+                            <td class="stats">${standing.played}</td>
+                            <td class="stats">${standing.won}</td>
+                            <td class="stats">${standing.drawn}</td>
+                            <td class="stats">${standing.lost}</td>
+                            <td class="stats">${standing.goalsFor}</td>
+                            <td class="stats">${standing.goalsAgainst}</td>
+                            <td class="stats">${standing.goalDifference >= 0 ? '+' : ''}${standing.goalDifference}</td>
+                            <td class="points">${standing.points}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
         </div>
     `;
 }
 
+// Filtrar partidos
+function filterMatches(filter) {
+    currentMatchFilter = filter;
+    
+    // Actualizar botones
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+    
+    renderMatches();
+}
+
+// Renderizar partidos
+function renderMatches() {
+    const matchesList = document.getElementById('matchesList');
+    
+    if (!currentTournament) {
+        matchesList.innerHTML = '';
+        return;
+    }
+    
+    const tournament = tournaments[currentTournament];
+    let matches = tournament.matches;
+    
+    if (matches.length === 0) {
+        matchesList.innerHTML = '<p>Genera la liga para ver los partidos.</p>';
+        return;
+    }
+    
+    // Aplicar filtro
+    if (currentMatchFilter === 'pending') {
+        matches = matches.filter(match => !match.completed);
+    } else if (currentMatchFilter === 'completed') {
+        matches = matches.filter(match => match.completed);
+    }
+    
+    const totalMatches = tournament.matches.length;
+    const completedMatches = tournament.matches.filter(match => match.completed).length;
+    
+    matchesList.innerHTML = `
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-number">${totalMatches}</span>
+                <span class="stat-label">Total Partidos</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">${completedMatches}</span>
+                <span class="stat-label">Completados</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">${totalMatches - completedMatches}</span>
+                <span class="stat-label">Pendientes</span>
+            </div>
+        </div>
+        ${matches.map(match => `
+            <div class="match-card ${match.completed ? 'completed' : ''}">
+                <div class="match-header">
+                    <div class="match-date">Partido #${match.id}</div>
+                    <div class="match-status ${match.completed ? 'completed' : 'pending'}">
+                        ${match.completed ? 'Completado' : 'Pendiente'}
+                    </div>
+                </div>
+                <div class="match-teams">
+                    <div class="match-team ${match.completed && match.score1 > match.score2 ? 'winner' : ''}">
+                        <div class="team-logo">${getPlayerTeamLogo(match.player1)}</div>
+                        <span>👤 ${match.player1}</span>
+                        <span>(${getPlayerTeamName(match.player1)})</span>
+                    </div>
+                    <div class="match-vs">VS</div>
+                    <div class="match-team ${match.completed && match.score2 > match.score1 ? 'winner' : ''}">
+                        <div class="team-logo">${getPlayerTeamLogo(match.player2)}</div>
+                        <span>👤 ${match.player2}</span>
+                        <span>(${getPlayerTeamName(match.player2)})</span>
+                    </div>
+                </div>
+                <div class="match-score">
+                    ${match.completed ? `
+                        <div class="score-display">${match.score1} - ${match.score2}</div>
+                    ` : `
+                        <input type="number" class="score-input" id="score1_${match.id}" min="0" max="20" placeholder="0">
+                        <span>-</span>
+                        <input type="number" class="score-input" id="score2_${match.id}" min="0" max="20" placeholder="0">
+                    `}
+                </div>
+                <div class="match-actions">
+                    ${match.completed ? `
+                        <button class="edit-btn" onclick="editMatch(${match.id})">Editar</button>
+                    ` : `
+                        <button class="save-btn" onclick="saveMatch(${match.id})">Guardar Resultado</button>
+                    `}
+                </div>
+            </div>
+        `).join('')}
+    `;
+}
+
+// Guardar resultado del partido
+function saveMatch(matchId) {
+    const score1Input = document.getElementById(`score1_${matchId}`);
+    const score2Input = document.getElementById(`score2_${matchId}`);
+    
+    const score1 = parseInt(score1Input.value);
+    const score2 = parseInt(score2Input.value);
+    
+    if (isNaN(score1) || isNaN(score2) || score1 < 0 || score2 < 0) {
+        showAlert('Por favor ingresa resultados válidos', 'error');
+        return;
+    }
+    
+    const tournament = tournaments[currentTournament];
+    const match = tournament.matches.find(m => m.id === matchId);
+    
+    if (!match) {
+        showAlert('Partido no encontrado', 'error');
+        return;
+    }
+    
+    match.score1 = score1;
+    match.score2 = score2;
+    match.completed = true;
+    
+    updateStandings(match);
+    localStorage.setItem('tournaments', JSON.stringify(tournaments));
+    
+    renderStandings();
+    renderMatches();
+    showAlert('Resultado guardado exitosamente', 'success');
+}
+
+// Editar partido
+function editMatch(matchId) {
+    const tournament = tournaments[currentTournament];
+    const match = tournament.matches.find(m => m.id === matchId);
+    
+    if (!match) {
+        showAlert('Partido no encontrado', 'error');
+        return;
+    }
+    
+    // Revertir estadísticas
+    revertMatchStats(match);
+    
+    match.completed = false;
+    match.score1 = null;
+    match.score2 = null;
+    
+    localStorage.setItem('tournaments', JSON.stringify(tournaments));
+    
+    renderStandings();
+    renderMatches();
+    showAlert('Partido listo para editar', 'info');
+}
+
+// Actualizar tabla de posiciones
+function updateStandings(match) {
+    const tournament = tournaments[currentTournament];
+    const player1Stats = tournament.standings[match.player1];
+    const player2Stats = tournament.standings[match.player2];
+    
+    // Actualizar estadísticas generales
+    player1Stats.played++;
+    player2Stats.played++;
+    
+    player1Stats.goalsFor += match.score1;
+    player1Stats.goalsAgainst += match.score2;
+    player1Stats.goalDifference = player1Stats.goalsFor - player1Stats.goalsAgainst;
+    
+    player2Stats.goalsFor += match.score2;
+    player2Stats.goalsAgainst += match.score1;
+    player2Stats.goalDifference = player2Stats.goalsFor - player2Stats.goalsAgainst;
+    
+    // Determinar resultado
+    if (match.score1 > match.score2) {
+        // Jugador 1 gana
+        player1Stats.won++;
+        player1Stats.points += 3;
+        player2Stats.lost++;
+    } else if (match.score2 > match.score1) {
+        // Jugador 2 gana
+        player2Stats.won++;
+        player2Stats.points += 3;
+        player1Stats.lost++;
+    } else {
+        // Empate
+        player1Stats.drawn++;
+        player1Stats.points += 1;
+        player2Stats.drawn++;
+        player2Stats.points += 1;
+    }
+}
+
+// Revertir estadísticas del partido
+function revertMatchStats(match) {
+    const tournament = tournaments[currentTournament];
+    const player1Stats = tournament.standings[match.player1];
+    const player2Stats = tournament.standings[match.player2];
+    
+    // Revertir estadísticas generales
+    player1Stats.played--;
+    player2Stats.played--;
+    
+    player1Stats.goalsFor -= match.score1;
+    player1Stats.goalsAgainst -= match.score2;
+    player1Stats.goalDifference = player1Stats.goalsFor - player1Stats.goalsAgainst;
+    
+    player2Stats.goalsFor -= match.score2;
+    player2Stats.goalsAgainst -= match.score1;
+    player2Stats.goalDifference = player2Stats.goalsFor - player2Stats.goalsAgainst;
+    
+    // Revertir resultado
+    if (match.score1 > match.score2) {
+        player1Stats.won--;
+        player1Stats.points -= 3;
+        player2Stats.lost--;
+    } else if (match.score2 > match.score1) {
+        player2Stats.won--;
+        player2Stats.points -= 3;
+        player1Stats.lost--;
+    } else {
+        player1Stats.drawn--;
+        player1Stats.points -= 1;
+        player2Stats.drawn--;
+        player2Stats.points -= 1;
+    }
+}
+
 // Obtener logo del equipo del jugador
 function getPlayerTeamLogo(playerName) {
-    if (!currentTournament || playerName === 'TBD' || playerName === 'BYE') {
-        return playerName === 'BYE' ? 'BYE' : '?';
-    }
+    if (!currentTournament) return '?';
     
     const tournament = tournaments[currentTournament];
     const assignment = tournament.assignments[playerName];
@@ -432,21 +635,33 @@ function getPlayerTeamLogo(playerName) {
     return assignment ? assignment.team.logo : '?';
 }
 
-// Reiniciar torneo
-function resetTournament() {
+// Obtener nombre del equipo del jugador
+function getPlayerTeamName(playerName) {
+    if (!currentTournament) return 'Sin equipo';
+    
+    const tournament = tournaments[currentTournament];
+    const assignment = tournament.assignments[playerName];
+    
+    return assignment ? assignment.team.name : 'Sin equipo';
+}
+
+// Reiniciar liga
+function resetLeague() {
     if (!currentTournament) return;
     
-    if (confirm('¿Estás seguro de que quieres reiniciar el torneo? Se perderán todas las asignaciones y cruces.')) {
+    if (confirm('¿Estás seguro de que quieres reiniciar la liga? Se perderán todas las asignaciones, partidos y resultados.')) {
         tournaments[currentTournament].assignments = {};
-        tournaments[currentTournament].bracket = null;
-        tournaments[currentTournament].tournamentType = '';
+        tournaments[currentTournament].matches = [];
+        tournaments[currentTournament].standings = {};
         
         localStorage.setItem('tournaments', JSON.stringify(tournaments));
         
         renderAssignments();
-        renderBracket();
-        document.getElementById('bracketSection').style.display = 'none';
-        showAlert('Torneo reiniciado', 'success');
+        renderStandings();
+        renderMatches();
+        document.getElementById('standingsSection').style.display = 'none';
+        document.getElementById('matchesSection').style.display = 'none';
+        showAlert('Liga reiniciada', 'success');
     }
 }
 
