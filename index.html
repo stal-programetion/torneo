@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torneo FIFA - Organizador</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏆 Organizador de Torneos FIFA</h1>
+            <p>Organiza torneos y asigna equipos a tus amigos</p>
+        </header>
+
+        <main>
+            <!-- Sección de crear torneo -->
+            <section class="create-tournament">
+                <h2>Crear Nuevo Torneo</h2>
+                <div class="form-group">
+                    <input type="text" id="tournamentName" placeholder="Nombre del torneo" required>
+                    <button onclick="createTournament()">Crear Torneo</button>
+                </div>
+            </section>
+
+            <!-- Selector de torneo activo -->
+            <section class="tournament-selector">
+                <h2>Seleccionar Torneo</h2>
+                <select id="tournamentSelect" onchange="loadTournament()">
+                    <option value="">Selecciona un torneo</option>
+                </select>
+            </section>
+
+            <!-- Sección de equipos disponibles -->
+            <section class="teams-section" id="teamsSection" style="display: none;">
+                <h2>Equipos Disponibles</h2>
+                <div class="teams-grid" id="teamsGrid"></div>
+                <button onclick="toggleTeamSelection()">Seleccionar Equipos</button>
+            </section>
+
+            <!-- Sección de jugadores -->
+            <section class="players-section" id="playersSection" style="display: none;">
+                <h2>Agregar Jugadores</h2>
+                <div class="form-group">
+                    <input type="text" id="playerName" placeholder="Nombre del jugador">
+                    <button onclick="addPlayer()">Agregar Jugador</button>
+                </div>
+                <button onclick="assignTeams()" id="assignBtn" disabled>Asignar Equipos Aleatoriamente</button>
+            </section>
+
+            <!-- Sección de asignaciones -->
+            <section class="assignments-section" id="assignmentsSection" style="display: none;">
+                <h2>Asignaciones del Torneo</h2>
+                <div id="assignmentsList"></div>
+                <button onclick="resetAssignments()">Reiniciar Asignaciones</button>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
